@@ -8,17 +8,9 @@ ses_client = boto3.client('ses')
 def lambda_handler(event, context):
     file_urls = []
 
-    prod_email = os.environ['PROD_EMAIL']
-    staging_email = os.environ['STAGING_EMAIL']
-    sandbox_email = os.environ['SANDBOX_EMAIL']
-
-    prod_bucket = os.environ['PROD_BUCKET']
-    staging_bucket = os.environ['STAGING_BUCKET']
-    sandbox_bucket = os.environ['SANDBOX_BUCKET']
-
-    prod_url = os.environ['PROD_URL']
-    staging_url = os.environ['STAGING_URL']
-    sandbox_url = os.environ['SANDBOX_URL']
+    email_source = os.environ['EMAIL_SOURCE']
+    bucket_name = os.environ['BUCKET_NAME']
+    download_url = os.environ['DOWNLOAD_URL']
 
     email_recipient = os.environ['EMAIL_RECIPIENT']
 
@@ -26,27 +18,18 @@ def lambda_handler(event, context):
         bucket = record['s3']['bucket']['name']
         key = record['s3']['object']['key']
 
-        if "prod" in bucket:
-            bucket = bucket.replace(prod_bucket, prod_url)
-            email_source = prod_email
-        elif "staging" in bucket:
-            bucket = bucket.replace(staging_bucket,  staging_url)
-            email_source = staging_email
-        elif "sandbox" in bucket:
-            bucket = bucket.replace(sandbox_bucket, sandbox_url)
-            email_source = sandbox_email
-        else:
-            logging.error(f"unrecognised bucket name: {bucket}")
+        if bucket_name not in bucket:
+            logging.error(f"Unexpected bucket name: {bucket}")
             continue
+
+        bucket = bucket.replace(bucket_name, download_url)
 
         base_url = "https://"
         file_url = f"{base_url}{bucket}/{key}"
         file_urls.append(file_url)
 
-
         file_name_with_extension = key.split('/')[-1]
         file_name = file_name_with_extension.rsplit('.', 1)[0]
-
 
         email_subject = f"New {file_name} dataset URL for lockbox"
         email_body = f"Download URL for lockbox:\n" + "\n".join(file_urls)

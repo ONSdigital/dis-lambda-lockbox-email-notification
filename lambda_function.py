@@ -19,7 +19,7 @@ def lambda_handler(event, context):
         key = record['s3']['object']['key']
 
         if bucket_name not in bucket:
-            logging.error(f"Unexpected bucket name: {bucket}")
+            logging.error(f"unrecognised bucket name: {bucket}")
             continue
 
         bucket = bucket.replace(bucket_name, download_url)

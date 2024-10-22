@@ -8,19 +8,33 @@ ses_client = boto3.client('ses')
 def lambda_handler(event, context):
     file_urls = []
 
+    prod_email = os.environ['PROD_EMAIL']
+    staging_email = os.environ['STAGING_EMAIL']
+    sandbox_email = os.environ['SANDBOX_EMAIL']
+
+    prod_bucket = os.environ['PROD_BUCKET']
+    staging_bucket = os.environ['STAGING_BUCKET']
+    sandbox_bucket = os.environ['SANDBOX_BUCKET']
+
+    prod_url = os.environ['PROD_URL']
+    staging_url = os.environ['STAGING_URL']
+    sandbox_url = os.environ['SANDBOX_URL']
+
+    email_recipient = os.environ['EMAIL_RECIPIENT']
+
     for record in event['Records']:
         bucket = record['s3']['bucket']['name']
         key = record['s3']['object']['key']
 
-        if "ons-dp-prod-encrypted-datasets" in bucket:
-            bucket = bucket.replace("ons-dp-prod-encrypted-datasets", "download.ons.gov.uk/downloads-new")
-            email_source = "florence@dp-prod.aws.onsdigital.uk"
-        elif "ons-dp-staging-encrypted-datasets" in bucket:
-            bucket = bucket.replace("ons-dp-staging-encrypted-datasets", "download.dp-staging.aws.onsdigital.uk/downloads-new")
-            email_source = "florence@dp-staging.aws.onsdigital.uk"
-        elif "ons-dp-sandbox-encrypted-datasets" in bucket:
-            bucket = bucket.replace("ons-dp-sandbox-encrypted-datasets", "download.dp.aws.onsdigital.uk/downloads-new")
-            email_source = "florence@dp.aws.onsdigital.uk"
+        if "prod" in bucket:
+            bucket = bucket.replace(prod_bucket, prod_url)
+            email_source = prod_email
+        elif "staging" in bucket:
+            bucket = bucket.replace(staging_bucket,  staging_url)
+            email_source = staging_email
+        elif "sandbox" in bucket:
+            bucket = bucket.replace(sandbox_bucket, sandbox_url)
+            email_source = sandbox_email
         else:
             logging.error(f"unrecognised bucket name: {bucket}")
             continue
@@ -38,7 +52,7 @@ def lambda_handler(event, context):
         email_body = f"Download URL for lockbox:\n" + "\n".join(file_urls)
 
         try:
-            send_email(["publishing@ons.gov.uk"], email_subject, email_body, email_source)
+            send_email([email_recipient], email_subject, email_body, email_source)
         except ClientError as e:
             logging.error(f"failed to send email: {e}")
             return {
